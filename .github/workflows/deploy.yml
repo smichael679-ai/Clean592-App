@@ -21,10 +21,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- SUPER FIX STEP ---
-      # 1. Fixes file names (package.Json -> package.json)
-      # 2. Fixes code errors (CloudUpload -> UploadCloud)
-      # 3. Fixes paths in HTML
+      # --- AUTO-FIX STEP ---
+      # Fixes common file naming and coding errors from manual uploads
       - name: Auto-Fix Known Issues
         run: |
           echo "🔧 Starting Auto-Fixes..."
@@ -34,7 +32,7 @@ jobs:
             mv package.Json package.json
           fi
           
-          # Fix 2: Code Error
+          # Fix 2: Code Error (CloudUpload -> UploadCloud)
           if [ -f "src/main.jsx" ]; then
             sed -i 's/CloudUpload/UploadCloud/g' src/main.jsx
           fi
@@ -47,21 +45,36 @@ jobs:
           # Remove .txt files
           find . -name "*.txt" -delete
 
-      # --- NEW STYLE GENERATOR STEP ---
-      # Automatically creates the missing config files for Tailwind CSS
-      - name: Create Missing Config Files
+      # --- FORCE CONFIGURATION STEP ---
+      # This guarantees the app knows its address on GitHub Pages
+      # and has the style engines turned on.
+      - name: Force Fix Configurations
         run: |
-          echo "🎨 Checking for Style Configurations..."
+          echo "🔧 Forcing correct configurations..."
           
-          if [ ! -f "tailwind.config.js" ]; then
-            echo "Creating tailwind.config.js..."
-            echo "export default { content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'], theme: { extend: {} }, plugins: [] }" > tailwind.config.js
-          fi
+          # 1. Get Repo Name for the Base URL
+          REPO_NAME="${{ github.event.repository.name }}"
+          echo "Detected Repo: $REPO_NAME"
           
-          if [ ! -f "postcss.config.js" ]; then
-            echo "Creating postcss.config.js..."
-            echo "export default { plugins: { tailwindcss: {}, autoprefixer: {} } }" > postcss.config.js
-          fi
+          # 2. Overwrite vite.config.js with correct Base URL
+          cat > vite.config.js <<EOF
+          import { defineConfig } from 'vite'
+          import react from '@vitejs/plugin-react'
+
+          export default defineConfig({
+            plugins: [react()],
+            base: '/$REPO_NAME/',
+            build: {
+              outDir: 'dist',
+            }
+          })
+          EOF
+          
+          # 3. Ensure Tailwind Config exists
+          echo "export default { content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'], theme: { extend: {} }, plugins: [] }" > tailwind.config.js
+          
+          # 4. Ensure PostCSS Config exists
+          echo "export default { plugins: { tailwindcss: {}, autoprefixer: {} } }" > postcss.config.js
 
       - name: Setup Node
         uses: actions/setup-node@v4
