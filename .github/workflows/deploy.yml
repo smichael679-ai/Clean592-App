@@ -21,39 +21,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- ROBUST AUTO-FIX STEP ---
-      # This script finds your project files wherever they are (root or subfolder)
-      # and ensures they are named correctly.
-      - name: Fix Project Structure
+      # --- SUPER FIX STEP ---
+      # This automatically fixes the 3 errors found in your screenshots
+      - name: Auto-Fix Known Issues
         run: |
-          echo "🔍 Searching for project files..."
+          echo "🔧 Starting Auto-Fixes..."
           
-          # 1. Rename common files with .txt extension if they exist
-          find . -name "package.json.txt" -exec mv {} package.json \; 2>/dev/null || true
-          find . -name "vite.config.js.txt" -exec mv {} vite.config.js \; 2>/dev/null || true
-          find . -name "index.html.txt" -exec mv {} index.html \; 2>/dev/null || true
-          
-          # 2. Locate the real package.json
-          TARGET=$(find . -name "package.json" -not -path "*/node_modules/*" | head -n 1)
-          
-          if [ -z "$TARGET" ]; then
-            echo "❌ CRITICAL: package.json still not found. Listing all files:"
-            ls -R
-            exit 1
+          # Fix 1: Case Sensitivity (package.Json -> package.json)
+          if [ -f "package.Json" ]; then
+            echo "Fixed: Renaming package.Json to package.json"
+            mv package.Json package.json
           fi
           
-          echo "✅ Found package.json at: $TARGET"
-          
-          # 3. If it's in a subfolder, move everything up to the root
-          DIR=$(dirname "$TARGET")
-          if [ "$DIR" != "." ]; then
-            echo "📦 Project is inside '$DIR'. Moving to root level..."
-            cp -r "$DIR"/* .
-            cp -r "$DIR"/.* . 2>/dev/null || true
+          # Fix 2: Code Error (CloudUpload -> UploadCloud)
+          # The logs showed CloudUpload wasn't found, so we swap it to the valid name
+          if [ -f "src/main.jsx" ]; then
+            echo "Fixed: Swapping CloudUpload for UploadCloud"
+            sed -i 's/CloudUpload/UploadCloud/g' src/main.jsx
+          fi
+
+          # Fix 3: Path Error in index.html
+          # Changes src="/src/..." to src="./src/..."
+          if [ -f "index.html" ]; then
+            echo "Fixed: Adding dot to script source"
+            sed -i 's|src="/src/|src="./src/|g' index.html
           fi
           
-          echo "📂 Final Root Directory Content:"
-          ls -la
+          # Remove any leftover .txt files if they exist
+          find . -name "*.txt" -delete
+          
+          echo "✅ Fixes Complete. Verifying package.json..."
+          ls -la package.json
 
       - name: Setup Node
         uses: actions/setup-node@v4
