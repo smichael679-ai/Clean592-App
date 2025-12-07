@@ -22,36 +22,46 @@ jobs:
         uses: actions/checkout@v4
 
       # --- SUPER FIX STEP ---
-      # This automatically fixes the 3 errors found in your screenshots
+      # 1. Fixes file names (package.Json -> package.json)
+      # 2. Fixes code errors (CloudUpload -> UploadCloud)
+      # 3. Fixes paths in HTML
       - name: Auto-Fix Known Issues
         run: |
           echo "🔧 Starting Auto-Fixes..."
           
-          # Fix 1: Case Sensitivity (package.Json -> package.json)
+          # Fix 1: Case Sensitivity
           if [ -f "package.Json" ]; then
-            echo "Fixed: Renaming package.Json to package.json"
             mv package.Json package.json
           fi
           
-          # Fix 2: Code Error (CloudUpload -> UploadCloud)
-          # The logs showed CloudUpload wasn't found, so we swap it to the valid name
+          # Fix 2: Code Error
           if [ -f "src/main.jsx" ]; then
-            echo "Fixed: Swapping CloudUpload for UploadCloud"
             sed -i 's/CloudUpload/UploadCloud/g' src/main.jsx
           fi
 
           # Fix 3: Path Error in index.html
-          # Changes src="/src/..." to src="./src/..."
           if [ -f "index.html" ]; then
-            echo "Fixed: Adding dot to script source"
             sed -i 's|src="/src/|src="./src/|g' index.html
           fi
           
-          # Remove any leftover .txt files if they exist
+          # Remove .txt files
           find . -name "*.txt" -delete
+
+      # --- NEW STYLE GENERATOR STEP ---
+      # Automatically creates the missing config files for Tailwind CSS
+      - name: Create Missing Config Files
+        run: |
+          echo "🎨 Checking for Style Configurations..."
           
-          echo "✅ Fixes Complete. Verifying package.json..."
-          ls -la package.json
+          if [ ! -f "tailwind.config.js" ]; then
+            echo "Creating tailwind.config.js..."
+            echo "export default { content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'], theme: { extend: {} }, plugins: [] }" > tailwind.config.js
+          fi
+          
+          if [ ! -f "postcss.config.js" ]; then
+            echo "Creating postcss.config.js..."
+            echo "export default { plugins: { tailwindcss: {}, autoprefixer: {} } }" > postcss.config.js
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
