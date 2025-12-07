@@ -20,14 +20,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # --- AUTO-FIX STEP ---
+      # This attempts to fix common file naming errors (like hidden .txt extensions)
+      # so the build can proceed even if the upload wasn't perfect.
+      - name: Fix File Extensions
+        run: |
+          mv package.json.txt package.json 2>/dev/null || true
+          mv vite.config.js.txt vite.config.js 2>/dev/null || true
+          mv index.html.txt index.html 2>/dev/null || true
+          mv firebase.json.txt firebase.json 2>/dev/null || true
+          # List files to verify fix in logs
+          ls -la
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      
       - name: Install Dependencies
         run: npm install
+      
       - name: Build App
         run: npm run build
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
